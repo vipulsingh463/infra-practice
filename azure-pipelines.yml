@@ -1,15 +1,39 @@
 trigger:
 - main
+- feature/*
 
 pool: OrionPool
 
-stages:
-  - stage: terraforminitoplan
-    displayName: TerraformInitPlan
-    jobs:
-    - job: Terraforminstall
-      # pool: OrionPool
-      steps:
-      - task: TerraformInstaller@1
-        inputs:
-          terraformVersion: 'latest'
+jobs:
+- job: TerraformInitPlan
+  displayName: "Terraform Init To Plan"
+  pool: OrionPool
+  steps:
+  - task: TerraformInstaller@1
+    inputs:
+      terraformVersion: 'latest'
+
+  - task: TerraformTask@5
+    inputs:
+      provider: 'azurerm'
+      command: 'init'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/infra-practice'
+      backendServiceArm: 'orion'
+      backendAzureRmStorageAccountName: 'storion'
+      backendAzureRmContainerName: 'storionc'
+      backendAzureRmKey: 'terraform.tfstate'
+
+  - task: TerraformTask@5
+    inputs:
+      provider: 'azurerm'
+      command: 'validate'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/infra-practice'
+    
+  - task: TerraformTask@5
+    inputs:
+      provider: 'azurerm'
+      command: 'plan'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/infra-practice'
+      environmentServiceNameAzureRM: 'orion'
+
+# - job: ManualValidation
