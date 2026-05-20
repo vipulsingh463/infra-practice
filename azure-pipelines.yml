@@ -1,0 +1,81 @@
+trigger: none
+
+pool: OrionPool
+
+stages:
+  - stage: terraforminitoplan
+    displayName: TerraformInitPlan
+    jobs:
+    - job: Terraforminstall
+      pool: OrionPool
+      steps:
+      - task: TerraformInstaller@1
+        inputs:
+          terraformVersion: 'latest'
+
+    - job: Terraforminit
+      steps:
+      - task: TerraformTask@5
+        inputs:
+          provider: 'azurerm'
+          command: 'init'
+          workingDirectory: '$(System.DefaultWorkingDirectory)'
+          backendServiceArm: 'orion-NebulaCore Platform'
+          backendAzureRmStorageAccountName: 'storion'
+          backendAzureRmContainerName: 'storionc'
+          backendAzureRmKey: '.tfstate'
+
+      - task: TerraformTask@5
+        inputs:
+          provider: 'azurerm'
+          command: 'validate'
+          workingDirectory: '$(System.DefaultWorkingDirectory)'
+
+      - task: TerraformTask@5
+        inputs:
+          provider: 'azurerm'
+          command: 'plan'
+          workingDirectory: '$(System.DefaultWorkingDirectory)'
+          environmentServiceNameAzureRM: 'orion-NebulaCore Platform'
+
+  - stage: scanning
+    displayName: scanning of code
+    jobs:
+    - job: tfsec
+      steps:
+      - task: tfsec@1
+        inputs:
+            version: 'v1.26.0'
+            dir: '$(System.DefaultWorkingDirectory)'
+
+  - stage: ManualValidation
+    jobs:
+      - job: Manualvalidation
+        pool: server 
+        steps:
+        - task: ManualValidation@1
+          inputs:
+            notifyUsers: 'vipulsingh463@gmail.com'
+            approvers: 'vipulsingh463@gmail.com'
+            onTimeout: 'resume'
+
+  - stage: TerraformApply
+    jobs:
+      - job: TerraformApply
+        steps:
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+            backendServiceArm: 'orion-NebulaCore Platform'
+            backendAzureRmStorageAccountName: 'storion'
+            backendAzureRmContainerName: 'storionc'
+            backendAzureRmKey: '.tfstate'
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'apply'
+            workingDirectory: '$(System.DefaultWorkingDirectory)'
+            commandOptions: '-auto-approve'
+            environmentServiceNameAzureRM: 'orion-NebulaCore Platform'
